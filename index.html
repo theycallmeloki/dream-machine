@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>three.js webgl - skinning and morphing</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+    <script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.122.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.7.4/umd/index.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/mvp.css@1.12/mvp.css"> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.0/tween.umd.js"></script>
+    <script type="text/javascript">
+      function startSequence() {
+        let count = 3;
+
+        function countDown() {
+          if (count > 0) {
+            drawText(count.toString()); // display the countdown number
+            count--;
+            setTimeout(countDown, 1000);
+          } else {
+            drawText('Action!');
+            setTimeout(() => {
+              processInstruction(); // start the main sequence after "action!"
+            }, 1000);
+          }
+        }
+        
+        countDown();
+      }
+
+      function drawCubeWalls() {
+      const width = 12;
+
+      const group = new THREE.Group();
+      group.position.z = -5;
+
+      const helper = new THREE.GridHelper(width, 16);
+      helper.rotation.x = Math.PI / 2;
+      group.add(helper);
+
+      const helper2 = new THREE.GridHelper(width, 16);
+      helper2.rotation.z = Math.PI / 2;
+      helper2.position.x = -width / 2;
+      helper2.position.z = width / 2;
+      group.add(helper2);
+
+      const helper3 = new THREE.GridHelper(12, 16);
+      helper3.rotation.z = Math.PI / 2;
+      helper3.position.x = width / 2;
+      helper3.position.z = width / 2;
+      group.add(helper3);
+
+      const helper4 = new THREE.GridHelper(12, 16);
+      helper4.position.y = width / 2;
+      helper4.position.z = width / 2;
+      group.add(helper4);
+
+      const helper5 = new THREE.GridHelper(12, 16);
+      helper5.position.y = -width / 2;
+      helper5.position.z = width / 2;
+      group.add(helper5);
+
+      return group;
+
+      var planeGeometry = new THREE.PlaneGeometry(10, 10);
+      var planeMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+      var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+      plane.position.z = -5;
+      plane.scale.setScalar(5);
+      return plane;
+    }
+
+    const assetPath = "./assets/models/";
+    function drawCharacter(name, scene, modelToLoad = "Milady") {
+      const group = new THREE.Group();
+
+      const loader = new THREE.FBXLoader();
+      loader.setPath(assetPath);
+      loader.load(modelToLoad + "/model.fbx", (fbx) => {
+        fbx.scale.setScalar(0.05);
+        fbx.traverse((c) => {
+          c.castShadow = true;
+        });
+
+        const animLoader = new THREE.FBXLoader();
+        const animsToLoad = ["Walk", "Talk", "SillyDancing", "Dancing2"]; // Add animation filenames here
+
+        const mixer = new THREE.AnimationMixer(fbx);
+        const animations = {};
+
+        animsToLoad.forEach((animFile) => {
+          animLoader.setPath(assetPath + modelToLoad + "/anims/");
+          try {
+            animLoader.load(animFile + ".fbx", (anim) => {
+              const action = mixer.clipAction(anim.animations[0]);
+              animations[animFile] = action;
+            });
+          } catch (e) {
+            console.log(e);
+          }
+        });
+
+        fbx.position.y = -6;
+        group.add(fbx);
+        scene.add(group);
+        // characters[name] = group;
+        characters[name] = {
+          group: group,
+          mixer: mixer,
+          animations: animations,
+          currentAnimation: null, // Add this line
+        };
+      });
+    }
+
+    function drawText(message = "Milady\nWorld Order", position) {
+      const loader = new THREE.FontLoader();
+      loader.load("fonts/helvetiker_regular.typeface.json", function (font) {
+        const color = 0xebff38;
+
+        const matDark = new THREE.LineBasicMaterial({
+          color: color,
+          side: THREE.DoubleSide,
+        });
+
+        const matLite = new THREE.MeshBasicMaterial({
+          color: color,
+          transparent: true,
+          opacity: 1,
+          side: THREE.DoubleSide,
+        });
+
+        const shapes = font.generateShapes(message, 1);
+
+        const geometry = new THREE.ShapeGeometry(shapes);
+
+        geometry.computeBoundingBox();
+
+        const xMid =
+          -0.5 * (geometry.boundingBox.max.x - geometry.boundingBox.min.x);
+
+        geometry.translate(xMid, 0, 0);
+
+        // make shape ( N.B. edge view not visible )
+
+        const text = new THREE.Mesh(geometry, matLite);
+        text.position.z = position.z;
+        text.position.y = 3;
+        scene.add(text);
+
+        // destroy in two seconds
+        setTimeout(() => {
+          scene.remove(text);
+        }, 2000);
+
+        // make line shape ( N.B. edge view remains visible )
+
+        // const holeShapes = [];
+
+        // for (let i = 0; i < shapes.length; i++) {
+        //   const shape = shapes[i];
+
+        //   if (shape.holes && shape.holes.length > 0) {
+        //     for (let j = 0; j < shape.holes.length; j++) {
+        //       const hole = shape.holes[j];
+        //       holeShapes.push(hole);
+        //     }
+        //   }
+        // }
+
+        // shapes.push.apply(shapes, holeShapes);
+
+        // const lineText = new THREE.Object3D();
+
+        // for (let i = 0; i < shapes.length; i++) {
+        //   const shape = shapes[i];
+
+        //   const points = shape.getPoints();
+        //   const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+        //   geometry.translate(xMid, 0, 0);
+
+        //   const lineMesh = new THREE.Line(geometry, matDark);
+        //   lineText.add(lineMesh);
+        // }
+
+        // scene.add(lineText);
+
+        // render();
+      }); //end load function
+    }
+
+    function switchAnimation(characterName, animName, fadeDuration = 0.5) {
+      const character = characters[characterName];
+      if (!character) {
+        console.error(`Character ${characterName} not found.`);
+        return;
+      }
+
+      const animation = character.animations[animName];
+      if (!animation) {
+        console.error(`Animation name ${animName} not found for ${characterName}.`);
+        return;
+      }
+
+      // If the target animation isn't already playing, crossfade to it
+      if (character.currentAnimation !== animation) {
+        if (character.currentAnimation) {
+          const prevAnim = character.currentAnimation;
+          animation.play();
+          character.currentAnimation.crossFadeTo(animation, fadeDuration, false);
+          setTimeout(() => {
+            prevAnim.stop();
+          }, fadeDuration * 1000);
+        } else {
+          animation.play();
+        }
+
+        characters[characterName].currentAnimation = animation;
+      }
+    }
+
+    function printToLogs(text) {
+      const logs = document.getElementById("log");
+      logs.innerHTML += `<div> #! ${text}</div>`;
+      logs.scrollTop = logs.scrollHeight;
+    }
+    function processTextbox(e) {
+      if (e.key == "Enter") {
+        addToQueue();
+      }
+    }
+
+    function generateInstruction() {
+      // var randomChoice = Math.floor(Math.random() * 2);
+      // switch (randomChoice) {
+      //   case 0:
+      //     var x = Math.random() * 8 - 4;
+      //     var z = Math.random() * 8 - 4;
+      //     instructions.push("go " + x + "," + z);
+      //     break;
+      //   case 1:
+      //     instructions.push(
+      //       "say " + words[Math.floor(Math.random() * words.length)]
+      //     );
+      //     break;
+      // }
+    }
+
+    const words = ["feds are coming bro", "omg hiii", "i love you", "i hate you"];
+
+    </script>
+  </head>
+
+  <body style="margin: 0px; text-align: center; background-color: black">
+    <canvas style="width: 100%; height: 100vh" id="threeCanvas">
+      loading...
+    </canvas>
+    <div
+      style="
+        position: fixed;
+        bottom: 5px;
+        right: 5px;
+        background-color: slategrey;
+        padding: 5px;
+      "
+    >
+      <div
+        readonly
+        id="log"
+        style="
+          width: 300px;
+          height: 30px;
+          background-color: aliceblue;
+          text-align: left;
+          overflow-y: scroll;
+        "
+      ></div>
+      <input id="instruction" onkeyup="processTextbox(event)"> </input>
+      <button onclick="(function(){ addToQueue() })();">
+        run
+      </button>
+    </div>
+
+    <script type="text/javascript">
+      var infinite = true;
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.25,
+        100
+      );
+
+      var myCanvas = document.getElementById("threeCanvas");
+      var renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        canvas: myCanvas,
+      });
+      renderer.setSize(window.innerWidth - 4, window.innerHeight - 4);
+
+      const controls = new THREE.OrbitControls(camera, myCanvas);
+      // const geometry = new THREE.BoxGeometry();
+      // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+      // const cube = new THREE.Mesh(geometry, material);
+      // scene.add(cube);
+
+      // add a 3d grid to the background
+
+      const group = drawCubeWalls();
+      scene.add(group);
+
+      var characters = {};
+      var mixers = [];
+      var clock = new THREE.Clock();
+
+      camera.position.z = 15;
+      const light = new THREE.AmbientLight(0x404040, 5); // soft white light
+      scene.add(light);
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        // const delta = THREE.clock.getDelta();
+        const delta = clock.getDelta();
+
+        TWEEN.update();
+        if (characters !== undefined) {
+          Object.values(characters).map((character) => character.mixer.update(delta));
+        }
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      function addToQueue() {
+        var instruction = document.getElementById("instruction").value;
+        // split by ;
+        var parts = instruction.split(";");
+        parts.forEach((part) => {
+          instructions.push(part.trim());
+        });
+        document.getElementById("instruction").value = "";
+      }
+
+      function processInstruction() {
+        if (instructions.length === 0) {
+          // sleep the REPL for 1 second
+          setTimeout(function () {
+            processInstruction();
+          }, 1000);
+          return;
+        }
+        var instruction = instructions.shift();
+        printToLogs(instruction);
+
+        var parts = instruction.split(" ");
+        var command = parts[0];
+
+        switch (command) {
+          case "character":
+            var name = parts[1];
+            var model = parts[2];
+            drawCharacter(name, scene, model);
+
+            break;
+          case "go":
+            var name = parts[1];
+            var character = characters[name].group;
+            switchAnimation(name, "Walk");
+
+            var args = parts[2].split(",");
+            var x = parseInt(args[0]);
+            var z = parseInt(args[1]);
+
+            var duration = 2000;
+
+            radians = Math.atan2(x - character.position.x, z - character.position.z);
+            new TWEEN.Tween(character.rotation).to({ y: radians }, 600).start();
+
+            new TWEEN.Tween(character.position)
+              .to({ x: x, z: z }, duration)
+              .easing(TWEEN.Easing.Linear.None)
+              .start();
+            break;
+          case "say":
+            var name = parts[1];
+            var character = characters[name].group;
+            switchAnimation(name, "Talk");
+            drawText(parts.slice(2).join(" "), character.position);
+            break;
+          case "sleep":
+            var duration = parseInt(parts[1]);
+            setTimeout(function () {
+              processInstruction();
+            }, duration);
+            return;
+            break;
+          case "do":
+            var name = parts[1];
+            var animation = parts[2];
+            switchAnimation(name, animation);
+            break;
+          default:
+            processInstruction();
+        }
+        setTimeout(function () {
+          processInstruction();
+        }, 0);
+      }
+
+      setTimeout(function () {
+        processInstruction();
+      }, 2000);
+
+      var instructions = [
+        "character milady1 Milady",
+        "sleep 500",
+        "go milady1 0,2",
+        "sleep 2000",
+        "say milady1 hello",
+        "sleep 2000",
+        "do milady1 Dancing2",
+        "sleep 4000",
+        "go milady1 0,-4",
+      ];
+    </script>
+  </body>
+</html>
