@@ -2,79 +2,76 @@
 <html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <title>milady</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+  <title>milady</title>
+  <!-- External Libraries -->
+  <script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.122.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fflate@0.7.4/umd/index.min.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.0/tween.umd.js"></script>
+  <!-- Styles -->
+  <link rel="stylesheet" href="https://unpkg.com/mvp.css@1.12/mvp.css">
+  <style>
+    body {
+      margin: 0px;
+      text-align: center;
+      background-color: black;
+    }
 
-    <!-- External Libraries -->
-    <script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.122.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fflate@0.7.4/umd/index.min.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.0/tween.umd.js"></script>
+    #threeCanvas {
+      width: 100%;
+      height: 100vh;
+    }
 
-    <!-- Styles -->
-    <link rel="stylesheet" href="https://unpkg.com/mvp.css@1.12/mvp.css">
-    <style>
-        body {
-            margin: 0px;
-            text-align: center;
-            background-color: black;
-        }
-        
-        #threeCanvas {
-            width: 100%;
-            height: 100vh;
-        }
-        
-        #log {
-            width: 300px;
-            height: 500px;
-            background-color: aliceblue;
-            text-align: left;
-            overflow-y: scroll;
-        }
+    #log {
+      width: 300px;
+      height: 500px;
+      background-color: aliceblue;
+      text-align: left;
+      overflow-y: scroll;
+    }
 
-        div.fixed {
-            position: fixed;
-            bottom: 5px;
-            right: 5px;
-            background-color: slategrey;
-            padding: 5px;
-        }
-    </style>
+    div.fixed {
+      position: fixed;
+      bottom: 5px;
+      right: 5px;
+      background-color: slategrey;
+      padding: 5px;
+    }
+  </style>
 </head>
 
 <body>
-    <canvas id="threeCanvas">loading...</canvas>
-    <div class="fixed">
-        <div id="log" readonly></div>
-        <input id="instruction" onkeyup="processTextbox(event)">
-        <button onclick="addToQueue()">run</button>
-    </div>
+  <canvas id="threeCanvas">loading...</canvas>
+  <div class="fixed">
+    <div id="log" readonly></div>
+    <input id="instruction" onkeyup="processTextbox(event)">
+    <button onclick="addToQueue()">run</button>
+  </div>
+  <script>
+    function startSequence() {
+      let count = 3;
 
-    <script>
-        function startSequence() {
-        let count = 3;
-
-        function countDown() {
-          if (count > 0) {
-            drawText(count.toString()); // display the countdown number
-            count--;
-            setTimeout(countDown, 1000);
-          } else {
-            drawText('Action!');
-            setTimeout(() => {
-              processInstruction(); // start the main sequence after "action!"
-            }, 1000);
-          }
+      function countDown() {
+        if (count > 0) {
+          drawText(count.toString()); // display the countdown number
+          count--;
+          setTimeout(countDown, 1000);
+        } else {
+          drawText('Action!');
+          setTimeout(() => {
+            processInstruction(); // start the main sequence after "action!"
+          }, 1000);
         }
-        
-        countDown();
       }
 
-      function drawCubeWalls() {
+      countDown();
+    }
+
+    function drawCubeWalls() {
       const width = 12;
 
       const group = new THREE.Group();
@@ -117,84 +114,109 @@
     }
 
     function removeCharacter(name) {
-        const characterData = characters[name];
-        
-        if (!characterData) {
-            console.warn(`Character ${name} not found.`);
-            return;
+      const characterData = characters[name];
+
+      if (!characterData) {
+        console.warn(`Character ${name} not found.`);
+        return;
+      }
+
+      // Remove the character group from the scene
+      scene.remove(characterData.group);
+
+      // Dispose of materials and geometries
+      characterData.group.traverse((child) => {
+        if (child.material) {
+          child.material.dispose();
         }
-        
-        // Remove the character group from the scene
-        scene.remove(characterData.group);
-        
-        // Dispose of materials and geometries
-        characterData.group.traverse((child) => {
-            if (child.material) {
-                child.material.dispose();
-            }
-            if (child.geometry) {
-                child.geometry.dispose();
-            }
-            if (child.texture) {
-                child.texture.dispose();
-            }
-        });
-        
-        // Remove animation mixer (this also disposes of animations)
-        const mixerIndex = mixers.indexOf(characterData.mixer);
-        if (mixerIndex !== -1) {
-            mixers.splice(mixerIndex, 1);
+        if (child.geometry) {
+          child.geometry.dispose();
         }
-        
-        // Remove references
-        delete characters[name];
+        if (child.texture) {
+          child.texture.dispose();
+        }
+      });
+
+      // Remove animation mixer (this also disposes of animations)
+      const mixerIndex = mixers.indexOf(characterData.mixer);
+      if (mixerIndex !== -1) {
+        mixers.splice(mixerIndex, 1);
+      }
+
+      // Remove references
+      delete characters[name];
     }
 
 
     const assetPath = "./assets/models/";
     function drawCharacter(name, scene, modelToLoad = "Milady", animsToLoad = []) {
-        return new Promise((resolve, reject) => {
-            const group = new THREE.Group();
-            const loader = new THREE.FBXLoader();
-            loader.setPath(assetPath);
+      return new Promise((resolve, reject) => {
+        const group = new THREE.Group();
+        const loader = new THREE.FBXLoader();
+        loader.setPath(assetPath);
 
-            loader.load(modelToLoad + "/model.fbx", (fbx) => {
-                fbx.scale.setScalar(0.05);
-                fbx.traverse((c) => {
-                    c.castShadow = true;
-                });
+        loader.load(modelToLoad + "/model.fbx", (fbx) => {
+          fbx.scale.setScalar(0.05);
+          fbx.traverse((c) => {
+            c.castShadow = true;
+          });
 
-                const animLoader = new THREE.FBXLoader();
-                const mixer = new THREE.AnimationMixer(fbx);
-                const animations = {};
+          const animLoader = new THREE.FBXLoader();
+          const mixer = new THREE.AnimationMixer(fbx);
+          const animations = {};
 
-                let animationsLoaded = 0;
+          let animationsLoaded = 0;
 
-                animsToLoad.forEach((animFile) => {
-                    animLoader.setPath(assetPath + modelToLoad + "/anims/");
-                    animLoader.load(animFile + ".fbx", (anim) => {
-                        const action = mixer.clipAction(anim.animations[0]);
-                        animations[animFile] = action;
-                        animationsLoaded++;
+          animsToLoad.forEach((animFile) => {
+            animLoader.setPath(assetPath + modelToLoad + "/anims/");
+            animLoader.load(animFile + ".fbx", (anim) => {
+              const action = mixer.clipAction(anim.animations[0]);
+              animations[animFile] = action;
+              animationsLoaded++;
 
-                        if (animationsLoaded === animsToLoad.length) {
-                            resolve(); // Resolve the promise when all animations are loaded
-                        }
-                    }, undefined, reject); // Reject the promise on error
-                });
-                
-                fbx.position.y = -6;
-                group.add(fbx);
-                scene.add(group);
-                characters[name] = {
-                    group: group,
-                    mixer: mixer,
-                    animations: animations,
-                    currentAnimation: null,
-                };
+              if (animationsLoaded === animsToLoad.length) {
+                resolve(); // Resolve the promise when all animations are loaded
+              }
             }, undefined, reject); // Reject the promise on error
-        });
+          });
+
+          fbx.position.y = -6;
+          group.add(fbx);
+          scene.add(group);
+          characters[name] = {
+            group: group,
+            mixer: mixer,
+            animations: animations,
+            currentAnimation: null,
+          };
+        }, undefined, reject); // Reject the promise on error
+      });
     }
+
+    function drawEnvironment(name, scene, envToLoad = "Island") {
+        return new Promise((resolve, reject) => {
+          const group = new THREE.Group();
+          const loader = new THREE.FBXLoader();
+          loader.setPath(assetPath + "../environments/");
+
+          loader.load(envToLoad + "/scene.fbx", (fbx) => {
+            fbx.scale.setScalar(0.01);
+            fbx.traverse((c) => {
+              c.castShadow = false;
+            });
+
+            fbx.position.y = -8;
+            fbx.position.x = -38;
+            fbx.rotation.y = -0.1
+            group.add(fbx);
+            scene.add(group);
+            environments[name] = {
+              group: group,
+            };
+            resolve();
+          }, undefined, reject); // Reject the promise on error
+        });
+      }
 
 
     function drawText(message = "Milady\nWorld Order", position) {
@@ -271,19 +293,19 @@
     }
 
     function extractAnimationsFromInstructions(characterName, instructions) {
-        let animations = [];
-        instructions.forEach(instruction => {
-            const parts = instruction.split(" ");
-            const command = parts[0];
-            const name = parts[1];
-            if (command === "do") {
-                const animationName = parts[2];
-                if (!animations.includes(animationName)) {
-                    animations.push(animationName);
-                }
-            }
-        });
-        return animations;
+      let animations = [];
+      instructions.forEach(instruction => {
+        const parts = instruction.split(" ");
+        const command = parts[0];
+        const name = parts[1];
+        if (command === "do") {
+          const animationName = parts[2];
+          if (!animations.includes(animationName)) {
+            animations.push(animationName);
+          }
+        }
+      });
+      return animations;
     }
 
 
@@ -302,196 +324,207 @@
     const words = ["feds are coming bro", "omg hiii", "i love you", "i hate you"];
 
     var infinite = true;
-      const scene = new THREE.Scene();
-      const camera = new THREE.PerspectiveCamera(
-        75,
-        window.innerWidth / window.innerHeight,
-        0.25,
-        100
-      );
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.25,
+      100
+    );
 
-      var myCanvas = document.getElementById("threeCanvas");
-      var renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        canvas: myCanvas,
+    var myCanvas = document.getElementById("threeCanvas");
+    var renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      canvas: myCanvas,
+    });
+    renderer.setSize(window.innerWidth - 4, window.innerHeight - 4);
+
+    const controls = new THREE.OrbitControls(camera, myCanvas);
+
+    // const group = drawCubeWalls();
+    // scene.add(group);
+
+    var characters = {};
+    var environments = {};
+
+    var mixers = [];
+    var clock = new THREE.Clock();
+
+    camera.position.z = 15;
+    const light = new THREE.AmbientLight(0x404040, 3); // soft white light
+    scene.add(light);
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // const delta = THREE.clock.getDelta();
+      const delta = clock.getDelta();
+
+      TWEEN.update();
+      if (characters !== undefined) {
+        Object.values(characters).map((character) => character.mixer.update(delta));
+      }
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    function addToQueue() {
+      var instruction = document.getElementById("instruction").value;
+      // split by ;
+      var parts = instruction.split(";");
+      parts.forEach((part) => {
+        instructions.push(part.trim());
       });
-      renderer.setSize(window.innerWidth - 4, window.innerHeight - 4);
+      document.getElementById("instruction").value = "";
+    }
 
-      const controls = new THREE.OrbitControls(camera, myCanvas);
-
-      const group = drawCubeWalls();
-      scene.add(group);
-
-      var characters = {};
-      var mixers = [];
-      var clock = new THREE.Clock();
-
-      camera.position.z = 15;
-      const light = new THREE.AmbientLight(0x404040, 5); // soft white light
-      scene.add(light);
-
-      function animate() {
-        requestAnimationFrame(animate);
-
-        // const delta = THREE.clock.getDelta();
-        const delta = clock.getDelta();
-
-        TWEEN.update();
-        if (characters !== undefined) {
-          Object.values(characters).map((character) => character.mixer.update(delta));
-        }
-        renderer.render(scene, camera);
-      }
-      animate();
-
-      function addToQueue() {
-        var instruction = document.getElementById("instruction").value;
-        // split by ;
-        var parts = instruction.split(";");
-        parts.forEach((part) => {
-          instructions.push(part.trim());
-        });
-        document.getElementById("instruction").value = "";
-      }
-
-      async function processInstruction() {
-        if (instructions.length === 0) {
-            setTimeout(() => {
-                processInstruction();
-            }, 1000);
-            return;
-        }
-        var instruction = instructions.shift();
-        printToLogs(instruction);
-
-        var parts = instruction.split(" ");
-        var command = parts[0];
-
-        switch (command) {
-            case "character":
-                var name = parts[1];
-                var model = parts[2];
-                const animationsToLoad = extractAnimationsFromInstructions(name, instructions);
-                try {
-                    await drawCharacter(name, scene, model, animationsToLoad);
-                } catch (error) {
-                    console.error("Error loading character:", error);
-                }
-                break;
-            case "go":
-                var name = parts[1];
-                var character = characters[name].group;
-                switchAnimation(name, "Walk");
-
-                var args = parts[2].split(",");
-                var x = parseInt(args[0]);
-                var z = parseInt(args[1]);
-
-                var duration = 2000;
-
-                radians = Math.atan2(x - character.position.x, z - character.position.z);
-                new TWEEN.Tween(character.rotation).to({ y: radians }, 600).start();
-
-                new TWEEN.Tween(character.position)
-                    .to({ x: x, z: z }, duration)
-                    .easing(TWEEN.Easing.Linear.None)
-                    .start();
-                break;
-            case "say":
-                var name = parts[1];
-                var character = characters[name].group;
-                switchAnimation(name, "Talk");
-                drawText(parts.slice(2).join(" "), character.position);
-                break;
-            case "sleep":
-                var duration = parseInt(parts[1]);
-                setTimeout(() => {
-                    processInstruction();
-                }, duration);
-                return;
-                break;
-            case "remove":
-                var name = parts[1];
-                removeCharacter(name);
-                break;
-            case "do":
-                var name = parts[1];
-                var animation = parts[2];
-                switchAnimation(name, animation);
-                break;
-            default:
-                processInstruction();
-        }
-
-        // This ensures the next instruction is processed in the next iteration of the event loop
+    async function processInstruction() {
+      if (instructions.length === 0) {
         setTimeout(() => {
+          processInstruction();
+        }, 1000);
+        return;
+      }
+      var instruction = instructions.shift();
+      printToLogs(instruction);
+
+      var parts = instruction.split(" ");
+      var command = parts[0];
+
+      switch (command) {
+        case "character":
+          var name = parts[1];
+          var model = parts[2];
+          const animationsToLoad = extractAnimationsFromInstructions(name, instructions);
+          try {
+            await drawCharacter(name, scene, model, animationsToLoad);
+          } catch (error) {
+            console.error("Error loading character:", error);
+          }
+          break;
+        case "go":
+          var name = parts[1];
+          var character = characters[name].group;
+          switchAnimation(name, "Walk");
+
+          var args = parts[2].split(",");
+          var x = parseInt(args[0]);
+          var z = parseInt(args[1]);
+
+          var duration = 2000;
+
+          radians = Math.atan2(x - character.position.x, z - character.position.z);
+          new TWEEN.Tween(character.rotation).to({ y: radians }, 600).start();
+
+          new TWEEN.Tween(character.position)
+            .to({ x: x, z: z }, duration)
+            .easing(TWEEN.Easing.Linear.None)
+            .start();
+          break;
+        case "say":
+          var name = parts[1];
+          var character = characters[name].group;
+          switchAnimation(name, "Talk");
+          drawText(parts.slice(2).join(" "), character.position);
+          break;
+        case "environment":
+          var name = parts[1];
+          var envModel = parts[2];
+          try {
+            await drawEnvironment(name, scene, envModel);
+          } catch (error) {
+            console.error("Error loading environment:", error);
+          }
+          break;
+        case "sleep":
+          var duration = parseInt(parts[1]);
+          setTimeout(() => {
             processInstruction();
-        }, 0);
+          }, duration);
+          return;
+          break;
+        case "remove":
+          var name = parts[1];
+          removeCharacter(name);
+          break;
+        case "do":
+          var name = parts[1];
+          var animation = parts[2];
+          switchAnimation(name, animation);
+          break;
+        default:
+          processInstruction();
       }
 
-      setTimeout(function () {
+      // This ensures the next instruction is processed in the next iteration of the event loop
+      setTimeout(() => {
         processInstruction();
-      }, 2000);
+      }, 0);
+    }
 
-      var instructions = [
-        "character milady1 Milady",
-        "sleep 500",
-        "do milady1 Talk",
-        "do milady1 Walk",
-        "go milady1 0,0",
-        "sleep 1650",
-        "go milady1 0,1",
-        "sleep 1000",
-        "say milady1 miladys got talent",
-        "sleep 2500",
-        "do milady1 Ymca-Dance",
-        "sleep 3000",
-        "do milady1 Robot-Hip-Hop-Dance",
-        "sleep 4000",
-        "do milady1 Macarena-Dance",
-        "sleep 4000",
-        "do milady1 Robot-Hip-Hop-Dance",
-        "sleep 4000",
-        "do milady1 Shopping-Cart-Dance",
-        "sleep 3000",
-        "do milady1 Twist-Dance",
-        "sleep 3000",
-        "do milady1 Macarena-Dance",
-        "sleep 4000",
-        "do milady1 Silly-Dancing",
-        "sleep 4000",
-        "do milady1 Shopping-Cart-Dance",
-        "sleep 3000",
-        "do milady1 Chicken-Dance",
-        "sleep 4000",
-        "do milady1 Ymca-Dance",
-        "sleep 4000",
-        "do milady1 Shopping-Cart-Dance",
-        "sleep 2000",
-        "do milady1 Chicken-Dance",
-        "sleep 3000",
-        "do milady1 Robot-Hip-Hop-Dance",
-        "sleep 3000",
-        "do milady1 Can-Can",
-        "sleep 1000",
-        "do milady1 Ymca-Dance",
-        "sleep 3000",
-        "do milady1 Macarena-Dance",
-        "sleep 2000",
-        "do milady1 Chicken-Dance",
-        "sleep 2000",
-        "do milady1 Can-Can",
-        "sleep 1000",
-        "do milady1 Robot-Hip-Hop-Dance",
-        "sleep 1000",
-        "do milady1 Silly-Dancing",
-        "sleep 1000",
-        "go milady1 0,-6",
-        "sleep 2000",
-        "remove milady1"
-      ];
-    </script>
+    setTimeout(function () {
+      processInstruction();
+    }, 2000);
+
+    var instructions = [
+      "character milady1 Milady",
+      "environment island Island",
+      "sleep 500",
+      "do milady1 Talk",
+      "do milady1 Walk",
+      "go milady1 0,0",
+      "sleep 1650",
+      "go milady1 0,1",
+      "sleep 1000",
+      "say milady1 miladys got talent",
+      "sleep 2500",
+      "do milady1 Ymca-Dance",
+      "sleep 3000",
+      "do milady1 Robot-Hip-Hop-Dance",
+      "sleep 4000",
+      "do milady1 Macarena-Dance",
+      "sleep 4000",
+      "do milady1 Robot-Hip-Hop-Dance",
+      "sleep 4000",
+      "do milady1 Shopping-Cart-Dance",
+      "sleep 3000",
+      "do milady1 Twist-Dance",
+      "sleep 3000",
+      "do milady1 Macarena-Dance",
+      "sleep 4000",
+      "do milady1 Silly-Dancing",
+      "sleep 4000",
+      "do milady1 Shopping-Cart-Dance",
+      "sleep 3000",
+      "do milady1 Chicken-Dance",
+      "sleep 4000",
+      "do milady1 Ymca-Dance",
+      "sleep 4000",
+      "do milady1 Shopping-Cart-Dance",
+      "sleep 2000",
+      "do milady1 Chicken-Dance",
+      "sleep 3000",
+      "do milady1 Robot-Hip-Hop-Dance",
+      "sleep 3000",
+      "do milady1 Can-Can",
+      "sleep 1000",
+      "do milady1 Ymca-Dance",
+      "sleep 3000",
+      "do milady1 Macarena-Dance",
+      "sleep 2000",
+      "do milady1 Chicken-Dance",
+      "sleep 2000",
+      "do milady1 Can-Can",
+      "sleep 1000",
+      "do milady1 Robot-Hip-Hop-Dance",
+      "sleep 1000",
+      "do milady1 Silly-Dancing",
+      "sleep 1000",
+      "go milady1 0,-6",
+      "sleep 2000",
+      "remove milady1"
+    ];
+  </script>
 </body>
 
 </html>
-
