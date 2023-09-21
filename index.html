@@ -156,7 +156,7 @@
         loader.setPath(assetPath);
 
         loader.load(modelToLoad + "/model.fbx", (fbx) => {
-          fbx.scale.setScalar(0.05);
+          fbx.scale.setScalar(0.04);
           fbx.traverse((c) => {
             c.castShadow = true;
           });
@@ -200,13 +200,14 @@
           loader.setPath(assetPath + "../environments/");
 
           loader.load(envToLoad + "/scene.fbx", (fbx) => {
-            fbx.scale.setScalar(0.01);
+            fbx.scale.setScalar(1.94);
             fbx.traverse((c) => {
               c.castShadow = false;
             });
 
             fbx.position.y = -8;
-            fbx.position.x = -38;
+            fbx.position.x = 0;
+            fbx.position.z = -8
             fbx.rotation.y = -0.1
             group.add(fbx);
             scene.add(group);
@@ -341,8 +342,8 @@
 
     const controls = new THREE.OrbitControls(camera, myCanvas);
 
-    // const group = drawCubeWalls();
-    // scene.add(group);
+    const group = drawCubeWalls();
+    scene.add(group);
 
     var characters = {};
     var environments = {};
