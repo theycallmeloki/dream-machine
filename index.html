@@ -76,6 +76,41 @@
       return plane;
     }
 
+    function removeCharacter(name) {
+        const characterData = characters[name];
+        
+        if (!characterData) {
+            console.warn(`Character ${name} not found.`);
+            return;
+        }
+        
+        // Remove the character group from the scene
+        scene.remove(characterData.group);
+        
+        // Dispose of materials and geometries
+        characterData.group.traverse((child) => {
+            if (child.material) {
+                child.material.dispose();
+            }
+            if (child.geometry) {
+                child.geometry.dispose();
+            }
+            if (child.texture) {
+                child.texture.dispose();
+            }
+        });
+        
+        // Remove animation mixer (this also disposes of animations)
+        const mixerIndex = mixers.indexOf(characterData.mixer);
+        if (mixerIndex !== -1) {
+            mixers.splice(mixerIndex, 1);
+        }
+        
+        // Remove references
+        delete characters[name];
+    }
+
+
     const assetPath = "./assets/models/";
     function drawCharacter(name, scene, modelToLoad = "Milady", animsToLoad = []) {
         return new Promise((resolve, reject) => {
@@ -162,40 +197,6 @@
           scene.remove(text);
         }, 2000);
 
-        // make line shape ( N.B. edge view remains visible )
-
-        // const holeShapes = [];
-
-        // for (let i = 0; i < shapes.length; i++) {
-        //   const shape = shapes[i];
-
-        //   if (shape.holes && shape.holes.length > 0) {
-        //     for (let j = 0; j < shape.holes.length; j++) {
-        //       const hole = shape.holes[j];
-        //       holeShapes.push(hole);
-        //     }
-        //   }
-        // }
-
-        // shapes.push.apply(shapes, holeShapes);
-
-        // const lineText = new THREE.Object3D();
-
-        // for (let i = 0; i < shapes.length; i++) {
-        //   const shape = shapes[i];
-
-        //   const points = shape.getPoints();
-        //   const geometry = new THREE.BufferGeometry().setFromPoints(points);
-
-        //   geometry.translate(xMid, 0, 0);
-
-        //   const lineMesh = new THREE.Line(geometry, matDark);
-        //   lineText.add(lineMesh);
-        // }
-
-        // scene.add(lineText);
-
-        // render();
       }); //end load function
     }
 
@@ -251,26 +252,11 @@
       logs.innerHTML += `<div> #! ${text}</div>`;
       logs.scrollTop = logs.scrollHeight;
     }
+
     function processTextbox(e) {
       if (e.key == "Enter") {
         addToQueue();
       }
-    }
-
-    function generateInstruction() {
-      // var randomChoice = Math.floor(Math.random() * 2);
-      // switch (randomChoice) {
-      //   case 0:
-      //     var x = Math.random() * 8 - 4;
-      //     var z = Math.random() * 8 - 4;
-      //     instructions.push("go " + x + "," + z);
-      //     break;
-      //   case 1:
-      //     instructions.push(
-      //       "say " + words[Math.floor(Math.random() * words.length)]
-      //     );
-      //     break;
-      // }
     }
 
     const words = ["feds are coming bro", "omg hiii", "i love you", "i hate you"];
@@ -296,7 +282,7 @@
         id="log"
         style="
           width: 300px;
-          height: 30px;
+          height: 500px;
           background-color: aliceblue;
           text-align: left;
           overflow-y: scroll;
@@ -326,12 +312,6 @@
       renderer.setSize(window.innerWidth - 4, window.innerHeight - 4);
 
       const controls = new THREE.OrbitControls(camera, myCanvas);
-      // const geometry = new THREE.BoxGeometry();
-      // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-      // const cube = new THREE.Mesh(geometry, material);
-      // scene.add(cube);
-
-      // add a 3d grid to the background
 
       const group = drawCubeWalls();
       scene.add(group);
@@ -424,6 +404,10 @@
                 }, duration);
                 return;
                 break;
+            case "remove":
+                var name = parts[1];
+                removeCharacter(name);
+                break;
             case "do":
                 var name = parts[1];
                 var animation = parts[2];
@@ -448,17 +432,67 @@
         "sleep 500",
         "do milady1 Talk",
         "do milady1 Walk",
-        "go milady1 0,2",
+        "go milady1 0,0",
+        "sleep 1650",
+        "go milady1 0,1",
+        "sleep 1000",
+        "say milady1 miladys got talent",
+        "sleep 2500",
+        "do milady1 Ymca-Dance",
+        "sleep 3000",
+        "do milady1 Robot-Hip-Hop-Dance",
+        "sleep 4000",
+        "do milady1 Hokey-Pokey",
+        "sleep 1000",
+        "do milady1 Gangnam-Style",
+        "sleep 4000",
+        "do milady1 Macarena-Dance",
+        "sleep 4000",
+        "do milady1 Robot-Hip-Hop-Dance",
+        "sleep 4000",
+        "do milady1 Shopping-Cart-Dance",
+        "sleep 3000",
+        "do milady1 Twist-Dance",
+        "sleep 3000",
+        "do milady1 Dancing-Maraschino-Step",
+        "sleep 3000",
+        "do milady1 Macarena-Dance",
+        "sleep 4000",
+        "do milady1 Silly-Dancing",
+        "sleep 4000",
+        "do milady1 Shopping-Cart-Dance",
+        "sleep 3000",
+        "do milady1 Chicken-Dance",
+        "sleep 4000",
+        "do milady1 Hokey-Pokey",
         "sleep 2000",
-        "say milady1 hello",
+        "do milady1 Ymca-Dance",
+        "sleep 4000",
+        "do milady1 Shopping-Cart-Dance",
         "sleep 2000",
-        "do milady1 ChickenDance",
-        "sleep 4000",
-        "do milady1 Telling-A-Secret",
-        "sleep 4000",
-        "do milady1 Button-Pushing",
-        "sleep 4000",
-        "go milady1 0,-4",
+        "do milady1 Chicken-Dance",
+        "sleep 3000",
+        "do milady1 Robot-Hip-Hop-Dance",
+        "sleep 3000",
+        "do milady1 Can-Can",
+        "sleep 1000",
+        "do milady1 Ymca-Dance",
+        "sleep 3000",
+        "do milady1 Macarena-Dance",
+        "sleep 2000",
+        "do milady1 Chicken-Dance",
+        "sleep 2000",
+        "do milady1 Can-Can",
+        "sleep 1000",
+        "do milady1 Gangnam-Style",
+        "sleep 3000",
+        "do milady1 Robot-Hip-Hop-Dance",
+        "sleep 1000",
+        "do milady1 Silly-Dancing",
+        "sleep 1000",
+        "go milady1 0,-6",
+        "sleep 2000",
+        "remove milady1"
       ];
     </script>
   </body>
