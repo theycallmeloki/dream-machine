@@ -326,12 +326,19 @@
 
     var infinite = true;
     const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87CEEB); // sky blue
     const camera = new THREE.PerspectiveCamera(
       75,
       window.innerWidth / window.innerHeight,
       0.25,
       100
     );
+
+    // const directionalLight = new THREE.DirectionalLight(0xffffff, 0.09); // white color, full intensity
+    //   directionalLight.position.set(0, 1, 1); // set the direction to top-right
+    //   directionalLight.castShadow = true; // enable shadow
+    //   scene.add(directionalLight);
+
 
     var myCanvas = document.getElementById("threeCanvas");
     var renderer = new THREE.WebGLRenderer({
@@ -342,8 +349,8 @@
 
     const controls = new THREE.OrbitControls(camera, myCanvas);
 
-    const group = drawCubeWalls();
-    scene.add(group);
+    // const group = drawCubeWalls();
+    // scene.add(group);
 
     var characters = {};
     var environments = {};
@@ -352,7 +359,7 @@
     var clock = new THREE.Clock();
 
     camera.position.z = 15;
-    const light = new THREE.AmbientLight(0x404040, 3); // soft white light
+    const light = new THREE.AmbientLight(0x404040, 4); // soft white light
     scene.add(light);
 
     function animate() {
